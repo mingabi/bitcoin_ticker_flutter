@@ -1,4 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/widgets.dart';
+import 'coin_data.dart';
+import 'package:flutter/cupertino.dart';
+import 'crypto_card.dart';
+import 'dart:io' show Platform;
 
 class PriceScreen extends StatefulWidget {
   @override
@@ -6,6 +12,82 @@ class PriceScreen extends StatefulWidget {
 }
 
 class _PriceScreenState extends State<PriceScreen> {
+  String selectedCurrency = 'USD';
+  Map<String, String> coinMap = {};
+
+  DropdownButton<String> getDropdownButton() {
+    List<DropdownMenuItem<String>> dropdownItems = [];
+
+    for (String currency in currenciesList) {
+      var newItem = DropdownMenuItem(
+        child: Text(currency),
+        value: currency,
+      );
+      dropdownItems.add(newItem);
+    }
+
+    return DropdownButton<String>(
+      value: selectedCurrency,
+      items: dropdownItems,
+      onChanged: (value) {
+        print(value);
+        setState(
+          () {
+            selectedCurrency = value;
+            getData();
+          },
+        );
+      },
+    );
+  }
+
+  CupertinoPicker getCupertinoPicker() {
+    List<Text> pickerItems = [];
+
+    for (String currency in currenciesList) {
+      var newItem = Text(currency);
+      pickerItems.add(newItem);
+    }
+    return CupertinoPicker(
+      backgroundColor: Colors.lightBlue,
+      itemExtent: 32,
+      onSelectedItemChanged: (selectedIndex) {
+        selectedCurrency = currenciesList[selectedIndex];
+        getData();
+      },
+      children: pickerItems,
+    );
+  }
+
+  Column getCryptoList() {
+    List<Widget> list = [];
+    CoinData coinData = CoinData();
+    coinData.getCoinData(selectedCurrency);
+    for (String crypto in cryptoList) {
+      var newItem = CryptoCard(
+          crypto: crypto,
+          cryptoRate: coinMap[crypto],
+          currency: selectedCurrency);
+      list.add(newItem);
+    }
+    return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch, children: list);
+  }
+
+  void getData() async {
+    CoinData coinData = CoinData();
+    var data = await coinData.getCoinData(selectedCurrency);
+    setState(() {
+      coinMap = data;
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    getData();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -16,33 +98,14 @@ class _PriceScreenState extends State<PriceScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          Padding(
-            padding: EdgeInsets.fromLTRB(18.0, 18.0, 18.0, 0),
-            child: Card(
-              color: Colors.lightBlueAccent,
-              elevation: 5.0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10.0),
-              ),
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 15.0, horizontal: 28.0),
-                child: Text(
-                  '1 BTC = ? USD',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 20.0,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ),
-          ),
+          getCryptoList(),
           Container(
             height: 150.0,
             alignment: Alignment.center,
             padding: EdgeInsets.only(bottom: 30.0),
             color: Colors.lightBlue,
-            child: null,
+            child:
+                Platform.isAndroid ? getDropdownButton() : getCupertinoPicker(),
           ),
         ],
       ),
